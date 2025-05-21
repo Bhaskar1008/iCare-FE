@@ -2,8 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { Filter, User, Users, Plus, RefreshCw } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
 import { services } from '../services';
-import { Lead, LeadStats } from '../types';
+import { Lead, LeadStats, PaginationParams } from '../types';
 import LeadCard from '../components/leads/LeadCard';
+import Pagination from '../components/common/Pagination';
 
 const LeadsPage: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -22,16 +23,23 @@ const LeadsPage: React.FC = () => {
     converted: 0,
     failed: 0
   });
+  const [pagination, setPagination] = useState({
+    currentPage: 1,
+    totalPages: 1,
+    totalItems: 0,
+    itemsPerPage: 10,
+  });
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchData = async () => {
+  const fetchData = async (params: PaginationParams = {}) => {
     try {
       setIsLoading(true);
       setError(null);
-      const response = await services.lead.getLeads(activeTab);
-      setLeads(response.leads);
+      const response = await services.lead.getLeads(activeTab, params);
+      setLeads(response.data);
       setStats(response.stats);
+      setPagination(response.pagination);
     } catch (error) {
       console.error('Failed to fetch leads:', error);
       setError('Failed to load data. Please try again later.');
@@ -47,11 +55,15 @@ const LeadsPage: React.FC = () => {
   }, [tabFromUrl]);
 
   useEffect(() => {
-    fetchData();
+    fetchData({ page: 1 });
   }, [activeTab, viewType]);
 
+  const handlePageChange = (page: number) => {
+    fetchData({ page });
+  };
+
   const handleRetry = () => {
-    fetchData();
+    fetchData({ page: pagination.currentPage });
   };
 
   return (
@@ -181,20 +193,28 @@ const LeadsPage: React.FC = () => {
               </button>
             </div>
           ) : (
-            <div className="grid grid-cols-2 gap-4">
-              {leads.map(lead => (
-                <LeadCard
-                  key={lead.id}
-                  lead={lead}
-                  onUpdate={() => console.log('Update lead:', lead.id)}
-                />
-              ))}
-              {leads.length === 0 && (
-                <div className="col-span-2 text-center py-12 text-gray-500">
-                  No leads found
-                </div>
-              )}
-            </div>
+            <>
+              <div className="grid grid-cols-2 gap-4 mb-6">
+                {leads.map(lead => (
+                  <LeadCard
+                    key={lead.id}
+                    lead={lead}
+                    onUpdate={() => console.log('Update lead:', lead.id)}
+                  />
+                ))}
+                {leads.length === 0 && (
+                  <div className="col-span-2 text-center py-12 text-gray-500">
+                    No leads found
+                  </div>
+                )}
+              </div>
+
+              <Pagination
+                currentPage={pagination.currentPage}
+                totalPages={pagination.totalPages}
+                onPageChange={handlePageChange}
+              />
+            </>
           )}
         </div>
       </div>

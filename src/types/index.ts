@@ -151,3 +151,18 @@ export interface LeadResponse {
   leads: Lead[];
   stats: LeadStats;
 }
+
+export interface PaginatedResponse<T> {
+  data: T[];
+  pagination: {
+    currentPage: number;
+    totalPages: number;
+    totalItems: number;
+    itemsPerPage: number;
+  };
+}
+
+export interface PaginationParams {
+  page?: number;
+  limit?: number;
+}

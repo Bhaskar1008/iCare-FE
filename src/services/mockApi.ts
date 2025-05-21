@@ -403,6 +403,24 @@ const mockLeads: Lead[] = [
   }
 ];
 
+// Helper function to paginate data
+const paginateData = <T>(data: T[], page = 1, limit = 10): PaginatedResponse<T> => {
+  const startIndex = (page - 1) * limit;
+  const endIndex = startIndex + limit;
+  const paginatedData = data.slice(startIndex, endIndex);
+  const totalPages = Math.ceil(data.length / limit);
+
+  return {
+    data: paginatedData,
+    pagination: {
+      currentPage: page,
+      totalPages,
+      totalItems: data.length,
+      itemsPerPage: limit,
+    },
+  };
+};
+
 // Mock API service for development (simulates real API responses)
 export const mockAuthService = {
   requestOTP: async (credentials: LoginCredentials): Promise<{ success: boolean; message: string }> => {
@@ -555,28 +573,36 @@ export const mockCustomerService = {
   }
 };
 
-// Mock lead service
+// Update the mock service to handle pagination
 export const mockLeadService = {
-  getLeads: async (filter?: string): Promise<LeadResponse> => {
-    await sleep(500); // Simulate API delay
+  getLeads: async (filter?: string, { page = 1, limit = 10 }: PaginationParams = {}): Promise<PaginatedResponse<Lead> & { stats: LeadStats }> => {
+    await sleep(500);
     
     let filteredLeads = [...mockLeads];
     if (filter && filter !== 'ALL') {
-      filteredLeads = mockLeads.filter(
-        lead => lead.status.toUpperCase() === filter
-      );
+      filteredLeads = mockLeads.filter(lead => lead.status.toUpperCase() === filter);
     }
     
+    const startIndex = (page - 1) * limit;
+    const endIndex = startIndex + limit;
+    const paginatedLeads = filteredLeads.slice(startIndex, endIndex);
+    
     return {
-      leads: filteredLeads,
+      data: paginatedLeads,
+      pagination: {
+        currentPage: page,
+        totalPages: Math.ceil(filteredLeads.length / limit),
+        totalItems: filteredLeads.length,
+        itemsPerPage: limit,
+      },
       stats: {
         all: mockLeads.length,
         forToday: mockLeads.filter(l => l.status === 'For Today').length,
         open: mockLeads.filter(l => l.status === 'Open').length,
         discarded: mockLeads.filter(l => l.status === 'Discarded').length,
         converted: mockLeads.filter(l => l.status === 'Converted').length,
-        failed: mockLeads.filter(l => l.status === 'Failed').length
-      }
+        failed: mockLeads.filter(l => l.status === 'Failed').length,
+      },
     };
-  }
+  },
 };
